@@ -1,0 +1,2 @@
+flask==0.10
+cassandra-driver>=1.0.2
