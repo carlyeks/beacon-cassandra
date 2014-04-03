@@ -25,10 +25,14 @@ import edu.berkeley.cs.amplab.adam.rdd.AdamContext._
 import edu.berkeley.cs.amplab.adam.rdd.AdamContext
 import parquet.filter.UnboundRecordFilter
 
-object Import {
-  def exec(args: Array[String]) {
+object Main extends App {
+  override def main(args: Array[String]) {
     val sc = AdamContext.createSparkContext("beakin: import", "local[4]", null, Seq(), Seq())
-    val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, firstOfPair)
-    args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj)))
-  }
+    val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, isPaired, firstOfPair)
+    val allRecords = sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
+      .filter(ar => ar.getReadMapped && (!ar.getIsPaired || ar.getFirstOfPair) && ar.primaryAlignment)
+      .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
+
+    val query = "INSERT INTO beacon.locations (chromosome, location, base) VALUES (?, ?, ?)"
+ }
 }

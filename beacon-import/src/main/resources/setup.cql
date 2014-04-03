@@ -13,11 +13,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-CREATE KEYSPACE beakin
+CREATE KEYSPACE beacon
            WITH replication = {'class': 'SimpleStrategy', 'replication_factor' : 1};
 
-USE beakin;
-
-CREATE TABLE locations (chromosome ascii, location bigint, letter ascii, PRIMARY KEY ((chromosome, location, letter)))
-       WITH  comment = 'Chromosome and location, and a letter'
+CREATE TABLE beacon.locations (referenceName ascii, location bigint, base ascii, PRIMARY KEY ((referenceName, location, base)))
+       WITH  comment = 'Reference name and location, along with all bases at that position'
 
