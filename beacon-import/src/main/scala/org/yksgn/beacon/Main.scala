@@ -42,7 +42,7 @@ object Main extends App {
   }
 
   override def main(args: Array[String]) {
-    val sc = AdamContext.createSparkContext("beakin: import", "local[4]", null, Seq(), Seq())
+    val sc = AdamContext.createSparkContext("beacon: import", "local[4]", null, Seq(), Seq())
     val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
     val allRecords = sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
