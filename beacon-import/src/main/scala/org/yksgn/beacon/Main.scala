@@ -33,7 +33,13 @@ object Main extends App {
       case null => "local[4]"
       case x => x
     }
-    val sc = AdamContext.createSparkContext("beacon: import", master, null, Seq(), Seq())
+    val sparkJars = 
+      classOf[ADAMRecord].getProtectionDomain().getCodeSource().getLocation().getPath() +:
+    (System.getenv("SPARK_JARS") match {
+      case null => Seq()
+      case x => x.split(",").toSeq
+    })
+    val sc = AdamContext.createSparkContext("beacon: import", master, null, sparkJars, Seq())
     val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
     sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
