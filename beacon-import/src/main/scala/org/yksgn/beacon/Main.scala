@@ -15,7 +15,7 @@
   *     along with this program.  If not, see <http://www.gnu.org/licenses/>.
   */
 
-package org.yksgn.beakin
+package org.yksgn.beacon
 
 import com.datastax.driver.core._
 import edu.berkeley.cs.amplab.adam.avro.ADAMRecord
@@ -51,6 +51,5 @@ object Main extends App {
 
     val query = "INSERT INTO beacon.locations (chromosome, location, base) VALUES (?, ?, ?)"
 
-    
  }
 }
