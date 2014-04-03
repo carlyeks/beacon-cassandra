@@ -73,7 +73,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   </dependencies>
 
   <build>
-    <finalName>beacon-import</finalName>
     <plugins>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -95,7 +94,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 </transformer>
                 <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
               </transformers>
-              <finalName>adam-${project.version}</finalName>
+              <finalName>beacon-import</finalName>
               <filters>
                 <filter>
                   <artifact>*:*</artifact>
