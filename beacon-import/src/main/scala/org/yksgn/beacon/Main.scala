@@ -29,16 +29,18 @@ object Main extends App {
   val query = "INSERT INTO beacon.locations (chromosome, location, base) VALUES (?, ?, ?)"
 
   override def main(args: Array[String]) {
-    val sc = AdamContext.createSparkContext("beacon: import", "local[4]", null, Seq(), Seq())
+    val master = System.getenv("MASTER") match {
+      case null => "local[4]"
+      case x => x
+    }
+    val sc = AdamContext.createSparkContext("beacon: import", master, null, Seq(), Seq())
     val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
-    val allRecords = sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
+    sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
       .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
-      .cache()
-
-    allRecords.foreachPartition(partition => {
+      .foreachPartition(partition => {
       val cluster = Cluster.builder()
-        .addContactPoint("localhost")
+        .addContactPoint("127.0.0.1")
         .build()
       try {
         val session = cluster.connect()
