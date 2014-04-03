@@ -17,7 +17,7 @@
 
 package org.yksgn.beakin
 
-import com.datastax.driver.core
+import com.datastax.driver.core._
 import edu.berkeley.cs.amplab.adam.avro.ADAMRecord
 import edu.berkeley.cs.amplab.adam.projections.ADAMRecordField._
 import edu.berkeley.cs.amplab.adam.projections.Projection
@@ -26,13 +26,31 @@ import edu.berkeley.cs.amplab.adam.rdd.AdamContext
 import parquet.filter.UnboundRecordFilter
 
 object Main extends App {
+  var cluster : Cluster = null
+
+  private def connectCassandra(node: String) : Session = {
+    if (cluster == null) {
+      cluster = Cluster.builder()
+        .addContactPoint(node)
+        .build()
+    }
+    cluster.connect()
+  }
+
+  private def close() {
+    cluster.close()
+  }
+
   override def main(args: Array[String]) {
     val sc = AdamContext.createSparkContext("beakin: import", "local[4]", null, Seq(), Seq())
-    val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, isPaired, firstOfPair)
+    val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
     val allRecords = sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
-      .filter(ar => ar.getReadMapped && (!ar.getIsPaired || ar.getFirstOfPair) && ar.primaryAlignment)
+      .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
       .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
+      .cache()
 
     val query = "INSERT INTO beacon.locations (chromosome, location, base) VALUES (?, ?, ?)"
+
+    
  }
 }
