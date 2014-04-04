@@ -26,8 +26,6 @@ import edu.berkeley.cs.amplab.adam.rdd.AdamContext
 import parquet.filter.UnboundRecordFilter
 
 object Main extends App {
-  val query = "INSERT INTO beacon.locations (chromosome, location, base) VALUES (?, ?, ?)"
-
   override def main(args: Array[String]) {
     val master = System.getenv("MASTER") match {
       case null => "local[4]"
@@ -48,13 +46,15 @@ object Main extends App {
       val cluster = Cluster.builder()
         .addContactPoint("127.0.0.1")
         .build()
+      val session = cluster.connect()
+
       try {
-        val session = cluster.connect()
-
-        val prepared = session.prepare(query)
-
-        partition.foreach { case (ref, loc, base) => session.execute(prepared.bind(ref, Long.box(loc), base.toString)) }
+        partition.foreach { case (ref, loc, base) =>
+          session.execute(
+            "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s')".format(ref, loc,base))
+        }
       } finally {
+        session.close()
         cluster.close()
       }
     })
