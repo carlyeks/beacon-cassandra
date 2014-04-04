@@ -18,6 +18,13 @@ entry, then the answer for Becaon should be a "YES". Because of this,
 we only need to run a single query over the Cassandra cluster after
 the data has been imported.
 
+## Setup
+
+The included CQL schema creates a keyspace and table. Run it before
+executing anything else.
+
+    cqlsh < setup.cql
+
 ## Executing Import
 
 The Import runs using ADAM, thus it needs to be compiled down to a
