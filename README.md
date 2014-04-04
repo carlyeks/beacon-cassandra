@@ -23,6 +23,10 @@ the data has been imported.
 The Import runs using ADAM, thus it needs to be compiled down to a
 jar. The Import operation is in beacon-import/ and is maven managed.
 
+    cd beacon-import/
+    mvn clean install
+    java -jar target/beacon-import.jar [bam file]
+
 ## Executing Serve
 
 The Serve operation is written in Python and runs using Flask and
