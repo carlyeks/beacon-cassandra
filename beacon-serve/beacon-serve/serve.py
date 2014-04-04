@@ -16,16 +16,16 @@ def query(referenceName, location, base):
     if session is None:
         raise CassandraConnectionError()
     else:
-        rows = session.execute(query, [referenceName, location, base])
-        for row in rows:
+        if session.execute(query, [referenceName, location, base])[0][0] == 0:
+            return "NO"
+        else:
             return "YES"
-        return "NO"
 
 if __name__ == "__main__":
     try:
         # Need to use some configuration to get the Cassandra nodes we should use
         session = cluster.connect("beacon")
-        query = session.prepare("SELECT referenceName, location, base FROM beacon.locations WHERE referenceName = ? AND location = ? AND base = ?")
+        query = session.prepare("SELECT COUNT(1) FROM beacon.locations WHERE referenceName = ? AND location = ? AND base = ?")
     except NoHostAvailable as nhe:
         print nhe
     app.run()
