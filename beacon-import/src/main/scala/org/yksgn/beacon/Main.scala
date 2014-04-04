@@ -42,6 +42,7 @@ object Main extends App {
     sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
       .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
+      .distinct()
       .foreachPartition(partition => {
       val cluster = Cluster.builder()
         .addContactPoint("127.0.0.1")
@@ -49,10 +50,15 @@ object Main extends App {
       val session = cluster.connect()
 
       try {
-        partition.foreach { case (ref, loc, base) =>
-          session.execute(
-            "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s')".format(ref, loc,base))
-        }
+          partition
+            .grouped(1000)
+            .foreach(group => {
+              session.execute("BEGIN UNLOGGED BATCH\n" +
+                group.map { case (ref, loc, base) =>
+                  "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s');\n".format(ref, loc,base)
+                }.aggregate("")((p,n) => p + n, (l,r) => l + r) +
+                "APPLY BATCH;\n")
+            })
       } finally {
         session.close()
         cluster.close()
