@@ -18,11 +18,11 @@
 package org.yksgn.beacon
 
 import com.datastax.driver.core._
-import edu.berkeley.cs.amplab.adam.avro.ADAMRecord
-import edu.berkeley.cs.amplab.adam.projections.ADAMRecordField._
-import edu.berkeley.cs.amplab.adam.projections.Projection
-import edu.berkeley.cs.amplab.adam.rdd.AdamContext._
-import edu.berkeley.cs.amplab.adam.rdd.AdamContext
+import org.bdgenomics.adam.avro.ADAMRecord
+import org.bdgenomics.adam.projections.ADAMRecordField._
+import org.bdgenomics.adam.projections.Projection
+import org.bdgenomics.adam.rdd.ADAMContext._
+import org.bdgenomics.adam.rdd.ADAMContext
 import parquet.filter.UnboundRecordFilter
 
 object Main extends App {
@@ -37,19 +37,25 @@ object Main extends App {
       case null => Seq()
       case x => x.split(",").toSeq
     })
-    val sc = AdamContext.createSparkContext("beacon: import", master, null, sparkJars, Seq())
+    val cassandraHosts = System.getenv("CASSANDRA_HOST") match {
+      case null => Seq("127.0.0.1")
+      case x => x.split(",").toSeq
+    }
+
+    val sc = ADAMContext.createSparkContext("beacon: import", master, null, sparkJars, Seq())
     val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
+    
     sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
       .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
       .distinct()
       .foreachPartition(partition => {
-      val cluster = Cluster.builder()
-        .addContactPoint("127.0.0.1")
-        .build()
-      val session = cluster.connect()
+        val cluster = Cluster.builder()       
+          .addContactPoints(cassandraHosts: _*)
+          .build()
+        val session = cluster.connect()
 
-      try {
+        try {
           partition
             .grouped(1000)
             .foreach(group => {
@@ -59,10 +65,10 @@ object Main extends App {
                 }.aggregate("")((p,n) => p + n, (l,r) => l + r) +
                 "APPLY BATCH;\n")
             })
-      } finally {
-        session.close()
-        cluster.close()
-      }
-    })
- }
+        } finally {
+          session.close()
+          cluster.close()
+        }
+      })
+  }
 }

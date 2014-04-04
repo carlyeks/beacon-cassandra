@@ -27,8 +27,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   <artifactId>beacon-import</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
-  <name>Beacon implementation on top of Cassandra.</name>
-  <description>Implementation of the GA4GH Beacon API.</description>
+  <name>Beacon implementation on top of Cassandra</name>
+  <description>Implementation of the GA4GH Beacon API using ADAM for import, and Cassandra for storage.</description>
   <url>https://github.com/carlyeks/beacon-cassandra</url>
 
   <licenses>
@@ -49,12 +49,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <scala.version>2.10.3</scala.version>
     <cql.version>2.0.1</cql.version>
-    <adam.version>0.7.2</adam.version>
+    <adam.version>0.8.0</adam.version>
   </properties>
 
   <dependencies>
     <dependency>
-      <groupId>edu.berkeley.cs.amplab.adam</groupId>
+      <groupId>org.bdgenomics.adam</groupId>
       <artifactId>adam-core</artifactId>
       <version>${adam.version}</version>
     </dependency>
