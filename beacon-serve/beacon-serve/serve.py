@@ -14,11 +14,12 @@
 # along with this program; if not, write to the Free Software Foundation,
 # Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301  USA
 
+import os
 from flask import Flask
 from cassandra.cluster import Cluster,NoHostAvailable
 app = Flask(__name__)
 
-nodes = ["localhost"]
+nodes = os.getenv('CASSANDRA_HOSTS', '127.0.0.1').split(',')
 cluster = Cluster(nodes)
 session = None
 query = None
