@@ -7,16 +7,16 @@ cluster = Cluster(nodes)
 session = None
 query = None
 
-@app.route("/heartbeat")
+@app.route("/v1/heartbeat")
 def heartbeat():
     return "OK"
 
-@app.route("/")
-def query():
+@app.route("/v1/<referenceName>/<int:location>/<base>")
+def query(referenceName, location, base):
     if session is None:
         raise CassandraConnectionError()
     else:
-        rows = session.execute(query, ["chr1", 1, "A"])
+        rows = session.execute(query, [referenceName, location, base])
         for row in rows:
             return "YES"
         return "NO"
@@ -25,7 +25,7 @@ if __name__ == "__main__":
     try:
         # Need to use some configuration to get the Cassandra nodes we should use
         session = cluster.connect("beacon")
-        query = session.prepare("SELECT referenceName, position, base FROM beacon.locations WHERE referenceName = ? AND position = ? AND base = ?")
+        query = session.prepare("SELECT referenceName, location, base FROM beacon.locations WHERE referenceName = ? AND location = ? AND base = ?")
     except NoHostAvailable as nhe:
         print nhe
     app.run()
