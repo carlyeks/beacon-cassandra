@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS
                         referenceName ascii, 
                         location bigint, 
                         base ascii, 
-                        PRIMARY KEY ((referenceName, location, base))
+                        PRIMARY KEY (referenceName, location, base)
                         )
        WITH comment = 'Reference name and location, along with all bases at that position';
 
