@@ -48,7 +48,6 @@ object Main extends App {
     sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
       .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
-      .distinct()
       .foreachPartition(partition => {
         val cluster = Cluster.builder()       
           .addContactPoints(cassandraHosts: _*)
