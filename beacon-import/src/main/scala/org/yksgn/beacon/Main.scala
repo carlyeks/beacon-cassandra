@@ -18,6 +18,7 @@
 package org.yksgn.beacon
 
 import com.datastax.driver.core._
+import org.apache.spark.Logging
 import org.bdgenomics.adam.avro.ADAMRecord
 import org.bdgenomics.adam.projections.ADAMRecordField._
 import org.bdgenomics.adam.projections.Projection
@@ -25,18 +26,20 @@ import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.ADAMContext
 import parquet.filter.UnboundRecordFilter
 
-object Main extends App {
+object Main extends App with Logging {
   override def main(args: Array[String]) {
     val master = System.getenv("MASTER") match {
       case null => "local[4]"
       case x => x
     }
+
     val sparkJars = 
       classOf[ADAMRecord].getProtectionDomain().getCodeSource().getLocation().getPath() +:
     (System.getenv("SPARK_JARS") match {
       case null => Seq()
       case x => x.split(",").toSeq
     })
+
     val cassandraHosts = System.getenv("CASSANDRA_HOST") match {
       case null => Seq("127.0.0.1")
       case x => x.split(",").toSeq
@@ -53,17 +56,27 @@ object Main extends App {
           .addContactPoints(cassandraHosts: _*)
           .build()
         val session = cluster.connect()
+        val begin = "BEGIN UNLOGGED BATCH\n"
+        val end = "APPLY BATCH;\n"
 
         try {
+          var query = begin
+          var count = 0
           partition
-            .grouped(1000)
-            .foreach(group => {
-              session.execute("BEGIN UNLOGGED BATCH\n" +
-                group.map { case (ref, loc, base) =>
-                  "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s');\n".format(ref, loc,base)
-                }.aggregate("")((p,n) => p + n, (l,r) => l + r) +
-                "APPLY BATCH;\n")
-            })
+            .toSet
+            .foreach({ case (ref, loc, base) => {
+              if (query.length + end.length > 10240) {
+                query = query + end
+                session.execute(query)
+                query = begin
+              }
+              query = query +
+                "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s');\n".format(ref, loc, base)
+              count = count + 1
+              if (count % 10000 == 0) {
+                logWarning("Wrote %d records".format(count))
+              }
+            }})
         } finally {
           session.close()
           cluster.close()
