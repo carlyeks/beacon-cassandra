@@ -19,12 +19,12 @@ package org.yksgn.beacon
 
 import com.datastax.driver.core._
 import org.apache.spark.Logging
-import org.bdgenomics.adam.avro.ADAMRecord
+import org.bdgenomics.adam.predicates.ADAMPredicate
 import org.bdgenomics.adam.projections.ADAMRecordField._
 import org.bdgenomics.adam.projections.Projection
 import org.bdgenomics.adam.rdd.ADAMContext._
 import org.bdgenomics.adam.rdd.ADAMContext
-import parquet.filter.UnboundRecordFilter
+import org.bdgenomics.formats.avro.ADAMRecord
 
 object Main extends App with Logging {
   override def main(args: Array[String]) {
@@ -46,11 +46,11 @@ object Main extends App with Logging {
     }
 
     val sc = ADAMContext.createSparkContext("beacon: import", master, null, sparkJars, Seq())
-    val proj = Projection(referenceName, referenceUrl, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
+    val proj = Projection(contig, start, sequence, readMapped, primaryAlignment, readPaired, firstOfPair)
     
-    sc.union(args.map(sc.adamLoad[ADAMRecord, UnboundRecordFilter](_, projection=Some(proj))))
+    sc.union(args.map(sc.adamLoad[ADAMRecord, ADAMPredicate[ADAMRecord]](_, projection=Some(proj))))
       .filter(ar => ar.getReadMapped && (!ar.getReadPaired || ar.getFirstOfPair) && ar.primaryAlignment)
-      .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.getReferenceName, ar.getStart + idx, s) })
+      .flatMap(ar => ar.getSequence.zipWithIndex.map{ case (s, idx) => (ar.contig.contigName, ar.start + idx, s) })
       .foreachPartition(partition => {
         val cluster = Cluster.builder()       
           .addContactPoints(cassandraHosts: _*)
@@ -63,9 +63,8 @@ object Main extends App with Logging {
           var query = begin
           var count = 0
           partition
-            .toSet
             .foreach({ case (ref, loc, base) => {
-              if (query.length + end.length > 10240) {
+              if (query.length + end.length > 5120) {
                 query = query + end
                 session.execute(query)
                 query = begin
@@ -73,7 +72,7 @@ object Main extends App with Logging {
               query = query +
                 "INSERT INTO beacon.locations (referenceName, location, base) VALUES ('%s', %d,'%s');\n".format(ref, loc, base)
               count = count + 1
-              if (count % 10000 == 0) {
+              if (count % 100000 == 0) {
                 logWarning("Wrote %d records".format(count))
               }
             }})

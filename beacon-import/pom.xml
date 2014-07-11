@@ -49,7 +49,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <scala.version>2.10.3</scala.version>
     <cql.version>2.0.1</cql.version>
-    <adam.version>0.8.0</adam.version>
+    <adam.version>0.12.1-SNAPSHOT</adam.version>
   </properties>
 
   <dependencies>
